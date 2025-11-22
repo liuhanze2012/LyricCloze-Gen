@@ -15,69 +15,124 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Calculate layout settings based on line count to fit A4
+  // Calculate layout settings based on line count to fit A4 harmoniously
   const layoutSettings = useMemo(() => {
     if (!result) return null;
     const lineCount = result.lines.length;
 
-    // Intelligent Layout Logic
-    if (lineCount > 70) {
-      // Very Long Song (Dense Mode)
-      return {
-        titleSize: 'text-2xl',
-        artistSize: 'text-lg',
-        imageSize: 'w-20 h-20', // Smaller image
-        headerMb: 'mb-4',
-        textSize: 'text-xs', // Small text
-        lineHeight: 'leading-snug',
-        colGap: 'gap-8',
-        padding: 'p-[10mm]', // Reduced margins
+    // Base configuration extended with typography details
+    let settings = {
+      titleSize: 'text-4xl',
+      artistSize: 'text-xl',
+      imageSize: 'w-32 h-32',
+      headerMb: 'mb-8',
+      textSize: 'text-base',
+      lineHeight: 'leading-normal',
+      tracking: 'tracking-normal', // Letter spacing
+      colGap: 'gap-12',
+      columnCount: 'columns-1 md:columns-2 print:columns-2', // Default to 2 cols for print
+      padding: 'p-[20mm]',
+      wordExportFontSize: '11pt',
+      wordExportLineHeight: '1.5'
+    };
+
+    // Intelligent Layout & Typography Logic
+    if (lineCount > 75) {
+      // Ultra Dense (Very long songs)
+      settings = {
+        ...settings,
+        textSize: 'text-[10px]', // Custom tiny text
+        lineHeight: 'leading-[1.4]',
+        tracking: 'tracking-tighter',
+        imageSize: 'w-16 h-16',
+        titleSize: 'text-xl',
+        artistSize: 'text-base',
+        headerMb: 'mb-3',
+        padding: 'p-[10mm]',
+        colGap: 'gap-4',
         wordExportFontSize: '9pt',
+        wordExportLineHeight: '1.1'
+      };
+    } else if (lineCount > 60) {
+      // Dense
+      settings = {
+        ...settings,
+        textSize: 'text-xs',
+        lineHeight: 'leading-relaxed',
+        tracking: 'tracking-tight',
+        imageSize: 'w-20 h-20',
+        titleSize: 'text-2xl',
+        headerMb: 'mb-4',
+        padding: 'p-[12mm]',
+        colGap: 'gap-6',
+        wordExportFontSize: '10pt',
         wordExportLineHeight: '1.2'
       };
     } else if (lineCount > 50) {
-      // Long Song (Compact Mode)
-      return {
-        titleSize: 'text-3xl',
-        artistSize: 'text-xl',
-        imageSize: 'w-24 h-24',
-        headerMb: 'mb-6',
+      // Compact
+      settings = {
+        ...settings,
         textSize: 'text-sm',
-        lineHeight: 'leading-normal',
-        colGap: 'gap-10',
+        lineHeight: 'leading-loose', // Give it breath if space allows
+        tracking: 'tracking-normal',
+        imageSize: 'w-24 h-24',
+        titleSize: 'text-3xl',
+        headerMb: 'mb-6',
         padding: 'p-[15mm]',
-        wordExportFontSize: '10pt',
-        wordExportLineHeight: '1.4'
+        colGap: 'gap-8',
+        wordExportFontSize: '10.5pt',
+        wordExportLineHeight: '1.3'
       };
-    } else if (lineCount > 30) {
-      // Medium Song (Normal Mode)
-      return {
-        titleSize: 'text-4xl',
-        artistSize: 'text-xl',
-        imageSize: 'w-32 h-32',
-        headerMb: 'mb-8',
+    } else if (lineCount > 35) {
+      // Balanced / Normal
+      settings = {
+        ...settings,
         textSize: 'text-base',
-        lineHeight: 'leading-relaxed',
-        colGap: 'gap-12',
-        padding: 'p-[20mm]',
+        lineHeight: 'leading-[2.2]', // Custom loose leading to fill space
+        tracking: 'tracking-wide', // Slightly wider for elegance
+        imageSize: 'w-28 h-28',
+        titleSize: 'text-3xl',
+        headerMb: 'mb-8',
+        padding: 'p-[18mm]',
+        colGap: 'gap-10',
         wordExportFontSize: '11pt',
-        wordExportLineHeight: '1.6'
+        wordExportLineHeight: '1.5'
+      };
+    } else if (lineCount > 22) {
+      // Spacious
+      settings = {
+        ...settings,
+        textSize: 'text-lg',
+        lineHeight: 'leading-[2.5]', // Very loose
+        tracking: 'tracking-wider',
+        imageSize: 'w-36 h-36',
+        titleSize: 'text-4xl',
+        headerMb: 'mb-10',
+        padding: 'p-[20mm]',
+        colGap: 'gap-12',
+        wordExportFontSize: '12pt',
+        wordExportLineHeight: '1.8'
       };
     } else {
-      // Short Song (Spacious Mode)
-      return {
-        titleSize: 'text-4xl',
-        artistSize: 'text-2xl',
-        imageSize: 'w-32 h-32',
-        headerMb: 'mb-10',
-        textSize: 'text-lg',
-        lineHeight: 'leading-loose',
-        colGap: 'gap-16',
-        padding: 'p-[20mm]',
-        wordExportFontSize: '12pt',
+      // Very Short - Center Single Column for Art Gallery feel
+      settings = {
+        ...settings,
+        textSize: 'text-xl',
+        lineHeight: 'leading-[3]', // Extremely loose
+        tracking: 'tracking-widest',
+        imageSize: 'w-40 h-40',
+        titleSize: 'text-5xl',
+        artistSize: 'text-3xl',
+        headerMb: 'mb-12',
+        padding: 'p-[25mm]',
+        columnCount: 'columns-1 max-w-3xl mx-auto print:columns-1', // Force single column
+        colGap: 'gap-0',
+        wordExportFontSize: '14pt',
         wordExportLineHeight: '2.0'
       };
     }
+
+    return settings;
   }, [result]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -123,8 +178,6 @@ const App: React.FC = () => {
   const handleExportWord = () => {
     if (!result || !layoutSettings) return;
 
-    // Create a simple HTML structure for the Word document
-    // We use inline styles because Word processes them better than classes
     const content = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
@@ -134,7 +187,6 @@ const App: React.FC = () => {
           body { font-family: 'Times New Roman', serif; font-size: ${layoutSettings.wordExportFontSize}; }
           h1 { font-size: 20pt; font-weight: bold; margin-bottom: 5px; }
           h2 { font-size: 14pt; color: #555; margin-bottom: 15px; }
-          /* Word doesn't handle CSS columns perfectly, so we rely on simple paragraphs with adjusted spacing */
           .lyrics-container { line-height: ${layoutSettings.wordExportLineHeight}; }
           p { margin-bottom: 0; margin-top: 0; }
         </style>
@@ -158,7 +210,6 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    // Filename
     const filename = `${songData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'worksheet'}_cloze.doc`;
     link.download = filename;
     document.body.appendChild(link);
@@ -206,9 +257,9 @@ const App: React.FC = () => {
         </div>
 
         {/* A4 Page Preview - Dynamic Styles Applied */}
-        <div className={`bg-white shadow-2xl print:shadow-none w-[210mm] min-h-[297mm] ${layoutSettings.padding} relative mx-auto print:mx-0 print:w-full print:h-auto`}>
+        <div className={`bg-white shadow-2xl print:shadow-none w-[210mm] min-h-[297mm] ${layoutSettings.padding} flex flex-col relative mx-auto print:mx-0 print:w-full print:h-auto`}>
           {/* Header */}
-          <header className={`flex justify-between items-start ${layoutSettings.headerMb} border-b-2 border-gray-100 pb-4`}>
+          <header className={`flex justify-between items-start ${layoutSettings.headerMb} border-b-2 border-gray-100 pb-4 flex-shrink-0`}>
             <div className="flex-1 pr-6">
               <h1 className={`font-serif ${layoutSettings.titleSize} font-bold text-gray-900 leading-tight mb-1`}>
                 {songData.title || "Untitled Song"}
@@ -239,7 +290,8 @@ const App: React.FC = () => {
           </header>
 
           {/* Lyrics Content */}
-          <main className={`${layoutSettings.textSize} ${layoutSettings.lineHeight} font-sans text-gray-800 columns-1 md:columns-2 ${layoutSettings.colGap} print:columns-2`}>
+          {/* Use flex-grow to fill space if needed, but columns layout is main driver */}
+          <main className={`flex-grow ${layoutSettings.textSize} ${layoutSettings.lineHeight} ${layoutSettings.tracking} font-sans text-gray-800 ${layoutSettings.columnCount} ${layoutSettings.colGap}`}>
              {result.lines.map((line, idx) => (
                 <p key={idx} className="mb-0 break-inside-avoid">
                   {/* Add a non-breaking space if line is empty to maintain height */}
@@ -248,8 +300,6 @@ const App: React.FC = () => {
              ))}
           </main>
           
-          {/* Word Bank Removed */}
-
         </div>
         
         <p className="mt-8 text-gray-500 text-sm print:hidden">
