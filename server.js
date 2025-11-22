@@ -14,10 +14,21 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Ensure we look for API_KEY first, then fall back to GEMINI_API_KEY for backward compatibility
+const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+
+if (!apiKey) {
+  console.warn("Warning: API_KEY or GEMINI_API_KEY not found in environment variables.");
+}
+
+const ai = apiKey ? new GoogleGenAI({ apiKey: apiKey }) : null;
 
 // API Route
 app.post('/api/generate', async (req, res) => {
+  if (!ai) {
+    return res.status(500).json({ error: 'API Key not configured on server.' });
+  }
+
   try {
     const { lyrics } = req.body;
 
@@ -31,31 +42,29 @@ app.post('/api/generate', async (req, res) => {
         lines: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
+          description: "Lyrics lines with 10-15 selected words replaced by 10 underscores (__________), no empty lines.",
         },
         answerKey: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
+          description: "Removed words in order.",
         },
         wordBank: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
+          description: "Removed words shuffled.",
         },
       },
       required: ["lines", "answerKey", "wordBank"],
     };
 
     const prompt = `
-      You are an expert ESL teacher.
-      Task: Create a cloze (fill-in-the-blank) song worksheet.
-      Target: CEFR Level A2/B1.
+      Task: Create an ESL cloze (fill-in-the-blank) song worksheet (CEFR A2/B1).
       
-      Instructions:
-      1. Select 10-15 clear, audible words (verbs, adjectives, nouns) to remove.
-      2. Avoid removing proper nouns or slang.
-      3. Return 'lines' where selected words are replaced by "__________" (10 underscores).
-      4. 'lines' must NOT contain newline characters. Split by stanza/line breaks visually.
-      5. 'answerKey' contains the removed words in order.
-      6. 'wordBank' contains the removed words shuffled.
+      1. Analyze lyrics. Select 10-15 distinct, audible words (verbs/adjectives/nouns) to remove.
+      2. Return 'lines' where selected words are replaced by EXACTLY 10 underscores: "__________".
+      3. Remove empty lines/stanzas. NO newlines within strings.
+      4. 'answerKey': removed words in order. 'wordBank': shuffled.
       
       Lyrics:
       "${lyrics}"
@@ -67,7 +76,8 @@ app.post('/api/generate', async (req, res) => {
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
-        temperature: 0.3,
+        temperature: 0.1, // Keep low temperature for speed
+        // Removed thinkingConfig to prevent API errors
       },
     });
 

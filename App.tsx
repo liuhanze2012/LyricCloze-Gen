@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { SongData, ClozeResult, AppState } from './types';
 import { generateClozeGame } from './services/geminiService';
 
@@ -14,6 +14,71 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Calculate layout settings based on line count to fit A4
+  const layoutSettings = useMemo(() => {
+    if (!result) return null;
+    const lineCount = result.lines.length;
+
+    // Intelligent Layout Logic
+    if (lineCount > 70) {
+      // Very Long Song (Dense Mode)
+      return {
+        titleSize: 'text-2xl',
+        artistSize: 'text-lg',
+        imageSize: 'w-20 h-20', // Smaller image
+        headerMb: 'mb-4',
+        textSize: 'text-xs', // Small text
+        lineHeight: 'leading-snug',
+        colGap: 'gap-8',
+        padding: 'p-[10mm]', // Reduced margins
+        wordExportFontSize: '9pt',
+        wordExportLineHeight: '1.2'
+      };
+    } else if (lineCount > 50) {
+      // Long Song (Compact Mode)
+      return {
+        titleSize: 'text-3xl',
+        artistSize: 'text-xl',
+        imageSize: 'w-24 h-24',
+        headerMb: 'mb-6',
+        textSize: 'text-sm',
+        lineHeight: 'leading-normal',
+        colGap: 'gap-10',
+        padding: 'p-[15mm]',
+        wordExportFontSize: '10pt',
+        wordExportLineHeight: '1.4'
+      };
+    } else if (lineCount > 30) {
+      // Medium Song (Normal Mode)
+      return {
+        titleSize: 'text-4xl',
+        artistSize: 'text-xl',
+        imageSize: 'w-32 h-32',
+        headerMb: 'mb-8',
+        textSize: 'text-base',
+        lineHeight: 'leading-relaxed',
+        colGap: 'gap-12',
+        padding: 'p-[20mm]',
+        wordExportFontSize: '11pt',
+        wordExportLineHeight: '1.6'
+      };
+    } else {
+      // Short Song (Spacious Mode)
+      return {
+        titleSize: 'text-4xl',
+        artistSize: 'text-2xl',
+        imageSize: 'w-32 h-32',
+        headerMb: 'mb-10',
+        textSize: 'text-lg',
+        lineHeight: 'leading-loose',
+        colGap: 'gap-16',
+        padding: 'p-[20mm]',
+        wordExportFontSize: '12pt',
+        wordExportLineHeight: '2.0'
+      };
+    }
+  }, [result]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -56,7 +121,7 @@ const App: React.FC = () => {
   };
 
   const handleExportWord = () => {
-    if (!result) return;
+    if (!result || !layoutSettings) return;
 
     // Create a simple HTML structure for the Word document
     // We use inline styles because Word processes them better than classes
@@ -66,10 +131,12 @@ const App: React.FC = () => {
         <meta charset="utf-8">
         <title>${songData.title} - Cloze Worksheet</title>
         <style>
-          body { font-family: 'Times New Roman', serif; font-size: 12pt; }
-          h1 { font-size: 24pt; font-weight: bold; margin-bottom: 5px; }
-          h2 { font-size: 14pt; color: #555; margin-bottom: 20px; }
-          .lyrics-container { line-height: 2.0; }
+          body { font-family: 'Times New Roman', serif; font-size: ${layoutSettings.wordExportFontSize}; }
+          h1 { font-size: 20pt; font-weight: bold; margin-bottom: 5px; }
+          h2 { font-size: 14pt; color: #555; margin-bottom: 15px; }
+          /* Word doesn't handle CSS columns perfectly, so we rely on simple paragraphs with adjusted spacing */
+          .lyrics-container { line-height: ${layoutSettings.wordExportLineHeight}; }
+          p { margin-bottom: 0; margin-top: 0; }
         </style>
       </head>
       <body>
@@ -80,6 +147,11 @@ const App: React.FC = () => {
         <div class="lyrics-container">
           ${result.lines.map(line => `<p>${line}</p>`).join('')}
         </div>
+
+        <br/>
+        <hr/>
+        <h3>Word Bank</h3>
+        <p>${result.wordBank.join('  •  ')}</p>
 
       </body>
       </html>
@@ -106,7 +178,7 @@ const App: React.FC = () => {
     setResult(null);
   };
 
-  if (appState === AppState.READY && result) {
+  if (appState === AppState.READY && result && layoutSettings) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center py-8 print:bg-white print:p-0 print:block">
         {/* Toolbar - Hidden when printing */}
@@ -139,23 +211,23 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* A4 Page Preview */}
-        <div className="bg-white shadow-2xl print:shadow-none w-[210mm] min-h-[297mm] p-[20mm] relative mx-auto print:mx-0 print:w-full print:h-auto">
+        {/* A4 Page Preview - Dynamic Styles Applied */}
+        <div className={`bg-white shadow-2xl print:shadow-none w-[210mm] min-h-[297mm] ${layoutSettings.padding} relative mx-auto print:mx-0 print:w-full print:h-auto`}>
           {/* Header */}
-          <header className="flex justify-between items-start mb-8 border-b-2 border-gray-100 pb-6">
+          <header className={`flex justify-between items-start ${layoutSettings.headerMb} border-b-2 border-gray-100 pb-4`}>
             <div className="flex-1 pr-6">
-              <h1 className="font-serif text-4xl font-bold text-gray-900 leading-tight mb-2">
+              <h1 className={`font-serif ${layoutSettings.titleSize} font-bold text-gray-900 leading-tight mb-1`}>
                 {songData.title || "Untitled Song"}
               </h1>
-              <h2 className="text-xl text-gray-600 font-medium">
+              <h2 className={`${layoutSettings.artistSize} text-gray-600 font-medium`}>
                 {songData.artist || "Unknown Artist"}
               </h2>
-              <div className="mt-4 inline-block px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500 uppercase tracking-wider font-semibold">
+              <div className="mt-2 inline-block px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500 uppercase tracking-wider font-semibold">
                 Listening Cloze Exercise
               </div>
             </div>
             
-            <div className="w-32 h-32 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+            <div className={`${layoutSettings.imageSize} flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200`}>
               {songData.coverImage ? (
                 <img 
                   src={songData.coverImage} 
@@ -164,7 +236,7 @@ const App: React.FC = () => {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m9 19.9 1.079-12.948a.75.75 0 0 1 1.498 0L12.64 19.9m-9.663-7.14 18.001 1.503a.75.75 0 1 0 .124-1.495L3.102 11.26a.75.75 0 0 0-.125 1.495Zm3.024-4.248 11.954-1.02a.75.75 0 0 1 .128 1.495L6.233 9.53a.75.75 0 0 1-.128-1.495Z" />
                   </svg>
                 </div>
@@ -173,18 +245,29 @@ const App: React.FC = () => {
           </header>
 
           {/* Lyrics Content */}
-          <main className="text-lg leading-relaxed font-sans text-gray-800 columns-1 md:columns-2 gap-12 print:columns-2">
+          <main className={`${layoutSettings.textSize} ${layoutSettings.lineHeight} font-sans text-gray-800 columns-1 md:columns-2 ${layoutSettings.colGap} print:columns-2`}>
              {result.lines.map((line, idx) => (
-                <p key={idx} className="mb-2 break-inside-avoid">
-                  {line}
+                <p key={idx} className="mb-0 break-inside-avoid">
+                  {/* Add a non-breaking space if line is empty to maintain height */}
+                  {line === '' ? '\u00A0' : line}
                 </p>
              ))}
           </main>
 
+          {/* Word Bank Footer - Optional, keeps it at bottom if needed, or flows naturally */}
+          <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-200 break-inside-avoid">
+             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Word Bank</h3>
+             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
+                {result.wordBank.map((word, i) => (
+                  <span key={i} className="bg-gray-50 px-2 py-1 rounded border border-gray-100">{word}</span>
+                ))}
+             </div>
+          </div>
+
         </div>
         
         <p className="mt-8 text-gray-500 text-sm print:hidden">
-          Tip: Set margins to "None" or "Default" in your printer settings for best results.
+          Tip: Set margins to "None" or "Default" in your printer settings.
         </p>
       </div>
     );

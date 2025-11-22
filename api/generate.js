@@ -2,13 +2,21 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Initialize Gemini API client server-side
-// The API key is loaded from process.env.API_KEY (Standard environment variable)
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Ensure we look for API_KEY first, then fall back to GEMINI_API_KEY for backward compatibility
+const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+
+// We instantiate the client inside the handler or check for key existence to avoid crash on load if key is missing
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  if (!ai) {
+    console.error("API Key is missing");
+    return res.status(500).json({ error: 'Server Configuration Error: API Key missing' });
   }
 
   try {
@@ -25,44 +33,31 @@ export default async function handler(req, res) {
         lines: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: "The lyrics split into individual lines. Remove empty lines. Each line should have selected vocabulary words replaced by 10 underscores (__________). NO newline characters allowed in strings.",
+          description: "Lyrics lines with 10-15 selected words replaced by 10 underscores (__________), no empty lines.",
         },
         answerKey: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: "The list of words that were removed, in the correct order they appear in the lyrics.",
+          description: "Removed words in order.",
         },
         wordBank: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: "The same list of words as answerKey, but shuffled in random order for the student to choose from.",
+          description: "Removed words shuffled.",
         },
       },
       required: ["lines", "answerKey", "wordBank"],
     };
 
     const prompt = `
-      You are an expert ESL (English as a Second Language) teacher creating a listening exercise.
+      Task: Create an ESL cloze (fill-in-the-blank) song worksheet (CEFR A2/B1).
       
-      Task:
-      1. Analyze the following song lyrics.
-      2. Select exactly 10 to 15 words to remove to create a 'fill-in-the-blank' (cloze) game.
-      3. Target Audience: Students with a vocabulary size of approximately 3000 words (CEFR Level A2/B1). 
-      4. Selection Criteria: 
-         - Choose words that are clearly audible in a song context (verbs, adjectives, common nouns).
-         - Avoid removing proper nouns (names, places) unless they are extremely common.
-         - Avoid removing slang or extremely obscure words.
-      5. Formatting: 
-         - Return the lyrics as an array of strings ("lines"). 
-         - REMOVE any empty lines or stanzas to save space.
-         - In each line, replace the selected words with exactly 10 underscores: "__________".
-         - CRITICAL: Ensure no element in the 'lines' array contains newline characters ('\\n'). Split strictly by visual line breaks.
-      6. Output:
-         - lines: The processed lyrics lines.
-         - answerKey: The correct answers in order.
-         - wordBank: The correct answers shuffled randomly.
+      1. Analyze lyrics. Select 10-15 distinct, audible words (verbs/adjectives/nouns) to remove.
+      2. Return 'lines' where selected words are replaced by EXACTLY 10 underscores: "__________".
+      3. Remove empty lines/stanzas. NO newlines within strings.
+      4. 'answerKey': removed words in order. 'wordBank': shuffled.
       
-      Lyrics to process:
+      Lyrics:
       "${lyrics}"
     `;
 
@@ -72,7 +67,8 @@ export default async function handler(req, res) {
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
-        temperature: 0.3,
+        temperature: 0.1, // Keep low temperature for speed and stability
+        // Removed thinkingConfig as it can cause 400 errors on standard flash models
       },
     });
 
