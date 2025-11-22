@@ -32,8 +32,6 @@ const App: React.FC = () => {
       colGap: 'gap-12',
       columnCount: 'columns-1 md:columns-2 print:columns-2', // Default to 2 cols for print
       padding: 'p-[20mm]',
-      wordExportFontSize: '11pt',
-      wordExportLineHeight: '1.5'
     };
 
     // Intelligent Layout & Typography Logic
@@ -50,8 +48,6 @@ const App: React.FC = () => {
         headerMb: 'mb-3',
         padding: 'p-[10mm]',
         colGap: 'gap-4',
-        wordExportFontSize: '9pt',
-        wordExportLineHeight: '1.1'
       };
     } else if (lineCount > 60) {
       // Dense
@@ -65,8 +61,6 @@ const App: React.FC = () => {
         headerMb: 'mb-4',
         padding: 'p-[12mm]',
         colGap: 'gap-6',
-        wordExportFontSize: '10pt',
-        wordExportLineHeight: '1.2'
       };
     } else if (lineCount > 50) {
       // Compact
@@ -80,8 +74,6 @@ const App: React.FC = () => {
         headerMb: 'mb-6',
         padding: 'p-[15mm]',
         colGap: 'gap-8',
-        wordExportFontSize: '10.5pt',
-        wordExportLineHeight: '1.3'
       };
     } else if (lineCount > 35) {
       // Balanced / Normal
@@ -95,8 +87,6 @@ const App: React.FC = () => {
         headerMb: 'mb-8',
         padding: 'p-[18mm]',
         colGap: 'gap-10',
-        wordExportFontSize: '11pt',
-        wordExportLineHeight: '1.5'
       };
     } else if (lineCount > 22) {
       // Spacious
@@ -110,8 +100,6 @@ const App: React.FC = () => {
         headerMb: 'mb-10',
         padding: 'p-[20mm]',
         colGap: 'gap-12',
-        wordExportFontSize: '12pt',
-        wordExportLineHeight: '1.8'
       };
     } else {
       // Very Short - Center Single Column for Art Gallery feel
@@ -127,8 +115,6 @@ const App: React.FC = () => {
         padding: 'p-[25mm]',
         columnCount: 'columns-1 max-w-3xl mx-auto print:columns-1', // Force single column
         colGap: 'gap-0',
-        wordExportFontSize: '14pt',
-        wordExportLineHeight: '2.0'
       };
     }
 
@@ -178,26 +164,156 @@ const App: React.FC = () => {
   const handleExportWord = () => {
     if (!result || !layoutSettings) return;
 
+    // --- Helper: Map Tailwind/App settings to CSS for Word ---
+    const getWordStyles = (settings: any) => {
+      // 1. Font Size
+      const sizeMap: Record<string, string> = {
+        'text-[10px]': '7.5pt',
+        'text-xs': '9pt',
+        'text-sm': '10.5pt',
+        'text-base': '12pt',
+        'text-lg': '13.5pt',
+        'text-xl': '15pt',
+        'text-2xl': '18pt',
+        'text-3xl': '22.5pt',
+        'text-4xl': '27pt',
+        'text-5xl': '36pt',
+      };
+      const fontSize = sizeMap[settings.textSize] || '12pt';
+      const titleSize = sizeMap[settings.titleSize] || '24pt';
+      const artistSize = sizeMap[settings.artistSize] || '14pt';
+
+      // 2. Line Height
+      let lineHeight = '1.5'; 
+      if (settings.lineHeight.includes('[')) {
+        lineHeight = settings.lineHeight.match(/\[(.*?)\]/)[1];
+      } else {
+        const lhMap: Record<string, string> = {
+          'leading-normal': '1.5',
+          'leading-relaxed': '1.6',
+          'leading-loose': '2.0',
+        };
+        lineHeight = lhMap[settings.lineHeight] || '1.5';
+      }
+
+      // 3. Letter Spacing
+      const trackMap: Record<string, string> = {
+        'tracking-tighter': '-0.05em',
+        'tracking-tight': '-0.025em',
+        'tracking-normal': '0',
+        'tracking-wide': '0.05em', // adjusted for Word readability
+        'tracking-wider': '0.1em',
+        'tracking-widest': '0.2em',
+      };
+      const letterSpacing = trackMap[settings.tracking] || '0';
+
+      // 4. Page Margins
+      // settings.padding is like 'p-[20mm]'
+      const margin = settings.padding.match(/\[(.*?)\]/)?.[1] || '20mm';
+
+      // 5. Columns
+      // Detect if we should use 2 columns based on the class string
+      const cols = settings.columnCount.includes('columns-2') ? 2 : 1;
+      
+      // Map Gap (gap-12 = 3rem ~ 0.5in)
+      let colGap = '0.5in';
+      if (settings.colGap === 'gap-4') colGap = '0.15in';
+      if (settings.colGap === 'gap-6') colGap = '0.25in';
+      if (settings.colGap === 'gap-8') colGap = '0.35in';
+      if (settings.colGap === 'gap-10') colGap = '0.4in';
+      if (settings.colGap === 'gap-12') colGap = '0.5in';
+
+      // 6. Image Size
+      const imgMap: Record<string, string> = {
+        'w-16 h-16': '64px',
+        'w-20 h-20': '80px',
+        'w-24 h-24': '96px',
+        'w-28 h-28': '112px',
+        'w-32 h-32': '128px',
+        'w-36 h-36': '144px',
+        'w-40 h-40': '160px',
+      };
+      const imgDim = imgMap[settings.imageSize] || '128px';
+
+      return { fontSize, titleSize, artistSize, lineHeight, letterSpacing, margin, cols, colGap, imgDim };
+    };
+
+    const styles = getWordStyles(layoutSettings);
+
+    // HTML Content for Word
+    // Using mso- specific styles to force columns and page layout in Word
     const content = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
         <title>${songData.title} - Cloze Worksheet</title>
         <style>
-          body { font-family: 'Times New Roman', serif; font-size: ${layoutSettings.wordExportFontSize}; }
-          h1 { font-size: 20pt; font-weight: bold; margin-bottom: 5px; }
-          h2 { font-size: 14pt; color: #555; margin-bottom: 15px; }
-          .lyrics-container { line-height: ${layoutSettings.wordExportLineHeight}; }
-          p { margin-bottom: 0; margin-top: 0; }
+          /* Page Layout */
+          @page Section1 {
+            size: 595.3pt 841.9pt; /* A4 Size */
+            margin: ${styles.margin} ${styles.margin} ${styles.margin} ${styles.margin};
+            mso-header-margin: 35.4pt;
+            mso-footer-margin: 35.4pt;
+            mso-paper-source: 0;
+            /* Column Definition for Word */
+            ${styles.cols > 1 ? `mso-columns: ${styles.cols} even ${styles.colGap};` : ''}
+          }
+          
+          div.Section1 { page: Section1; }
+          
+          /* Global Typography */
+          body { 
+            font-family: 'Calibri', 'Arial', sans-serif; 
+            font-size: ${styles.fontSize};
+            line-height: ${styles.lineHeight};
+            letter-spacing: ${styles.letterSpacing};
+            color: #000000;
+          }
+          
+          /* Header Styling - Using Table for reliability in Word */
+          table.header { width: 100%; border-bottom: 1.5pt solid #eeeeee; margin-bottom: 18pt; padding-bottom: 10pt; }
+          h1 { font-size: ${styles.titleSize}; font-weight: bold; margin: 0; color: #111827; }
+          h2 { font-size: ${styles.artistSize}; font-weight: normal; margin: 4pt 0; color: #4B5563; }
+          
+          .badge { 
+            font-size: 9pt; 
+            text-transform: uppercase; 
+            color: #6B7280; 
+            background: #F3F4F6; 
+            padding: 2pt 6pt;
+            border: 1pt solid #E5E7EB;
+            letter-spacing: 0.5pt;
+            display: inline-block;
+          }
+
+          /* Image */
+          img.cover { width: ${styles.imgDim}; height: ${styles.imgDim}; border: 1pt solid #E5E7EB; object-fit: cover; }
+
+          /* Lyrics Styling */
+          p { margin: 0; } /* No default paragraph margin, control via line-height */
+          .lyric-line { margin-bottom: 0; }
         </style>
       </head>
       <body>
-        <h1>${songData.title}</h1>
-        <h2>${songData.artist}</h2>
-        
-        <h3>Lyrics</h3>
-        <div class="lyrics-container">
-          ${result.lines.map(line => `<p>${line}</p>`).join('')}
+        <div class=Section1>
+          <!-- Header -->
+          <table class="header">
+            <tr>
+              <td valign="top">
+                <h1>${songData.title || "Untitled Song"}</h1>
+                <h2>${songData.artist || "Unknown Artist"}</h2>
+                <span class="badge">Listening Cloze Exercise</span>
+              </td>
+              <td valign="top" align="right" width="${parseInt(styles.imgDim) + 20}">
+                ${songData.coverImage 
+                  ? `<img src="${songData.coverImage}" class="cover" />` 
+                  : ''}
+              </td>
+            </tr>
+          </table>
+
+          <!-- Lyrics Content -->
+          ${result.lines.map(line => `<p class="lyric-line">${line === '' ? '&nbsp;' : line}</p>`).join('')}
         </div>
       </body>
       </html>
