@@ -49,13 +49,8 @@ app.post('/api/generate', async (req, res) => {
           items: { type: Type.STRING },
           description: "Removed words in order.",
         },
-        wordBank: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
-          description: "Removed words shuffled.",
-        },
       },
-      required: ["lines", "answerKey", "wordBank"],
+      required: ["lines", "answerKey"],
     };
 
     const prompt = `
@@ -64,7 +59,7 @@ app.post('/api/generate', async (req, res) => {
       1. Analyze lyrics. Select 10-15 distinct, audible words (verbs/adjectives/nouns) to remove.
       2. Return 'lines' where selected words are replaced by EXACTLY 10 underscores: "__________".
       3. Remove empty lines/stanzas. NO newlines within strings.
-      4. 'answerKey': removed words in order. 'wordBank': shuffled.
+      4. 'answerKey': removed words in order.
       
       Lyrics:
       "${lyrics}"
@@ -77,7 +72,6 @@ app.post('/api/generate', async (req, res) => {
         responseMimeType: "application/json",
         responseSchema: schema,
         temperature: 0.1, // Keep low temperature for speed
-        // Removed thinkingConfig to prevent API errors
       },
     });
 

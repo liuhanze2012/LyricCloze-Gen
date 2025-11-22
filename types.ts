@@ -8,7 +8,7 @@ export interface SongData {
 export interface ClozeResult {
   lines: string[];
   answerKey: string[];
-  wordBank: string[];
+  // Word bank removed as requested
 }
 
 export enum AppState {

@@ -147,12 +147,6 @@ const App: React.FC = () => {
         <div class="lyrics-container">
           ${result.lines.map(line => `<p>${line}</p>`).join('')}
         </div>
-
-        <br/>
-        <hr/>
-        <h3>Word Bank</h3>
-        <p>${result.wordBank.join('  •  ')}</p>
-
       </body>
       </html>
     `;
@@ -253,16 +247,8 @@ const App: React.FC = () => {
                 </p>
              ))}
           </main>
-
-          {/* Word Bank Footer - Optional, keeps it at bottom if needed, or flows naturally */}
-          <div className="mt-8 pt-4 border-t-2 border-dashed border-gray-200 break-inside-avoid">
-             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Word Bank</h3>
-             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
-                {result.wordBank.map((word, i) => (
-                  <span key={i} className="bg-gray-50 px-2 py-1 rounded border border-gray-100">{word}</span>
-                ))}
-             </div>
-          </div>
+          
+          {/* Word Bank Removed */}
 
         </div>
         
