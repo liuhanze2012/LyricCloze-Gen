@@ -1,0 +1,5 @@
+{
+  "name": "LyricCloze Gen",
+  "description": "Generate printable English listening cloze games from song lyrics using AI.",
+  "requestFramePermissions": []
+}
