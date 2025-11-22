@@ -2,8 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Initialize Gemini API client server-side
-// The API key is loaded from process.env (Server-side environment variable)
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// The API key is loaded from process.env.API_KEY (Standard environment variable)
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export default async function handler(req, res) {
   // Only allow POST requests
