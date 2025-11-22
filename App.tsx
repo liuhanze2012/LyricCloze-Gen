@@ -55,6 +55,52 @@ const App: React.FC = () => {
     window.print();
   };
 
+  const handleExportWord = () => {
+    if (!result) return;
+
+    // Create a simple HTML structure for the Word document
+    // We use inline styles because Word processes them better than classes
+    const content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>${songData.title} - Cloze Worksheet</title>
+        <style>
+          body { font-family: 'Times New Roman', serif; font-size: 12pt; }
+          h1 { font-size: 24pt; font-weight: bold; margin-bottom: 5px; }
+          h2 { font-size: 14pt; color: #555; margin-bottom: 20px; }
+          .lyrics-container { line-height: 2.0; }
+        </style>
+      </head>
+      <body>
+        <h1>${songData.title}</h1>
+        <h2>${songData.artist}</h2>
+        
+        <h3>Lyrics</h3>
+        <div class="lyrics-container">
+          ${result.lines.map(line => `<p>${line}</p>`).join('')}
+        </div>
+
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', content], {
+      type: 'application/msword'
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    // Filename
+    const filename = `${songData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'worksheet'}_cloze.doc`;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleReset = () => {
     setAppState(AppState.IDLE);
     setResult(null);
@@ -64,14 +110,23 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center py-8 print:bg-white print:p-0 print:block">
         {/* Toolbar - Hidden when printing */}
-        <div className="w-full max-w-[210mm] mb-6 flex justify-between items-center px-4 print:hidden">
+        <div className="w-full max-w-[210mm] mb-6 flex flex-col sm:flex-row justify-between items-center px-4 gap-4 print:hidden">
           <button 
             onClick={handleReset}
-            className="px-4 py-2 bg-gray-600 text-white rounded shadow hover:bg-gray-700 transition"
+            className="px-4 py-2 bg-gray-600 text-white rounded shadow hover:bg-gray-700 transition flex items-center gap-2"
           >
-            ← Edit / New
+            <span>←</span> Edit / New
           </button>
-          <div className="space-x-4">
+          <div className="flex gap-3">
+             <button 
+              onClick={handleExportWord}
+              className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+              Export to Word
+            </button>
              <button 
               onClick={handlePrint}
               className="px-6 py-2 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 transition flex items-center gap-2"
@@ -87,7 +142,7 @@ const App: React.FC = () => {
         {/* A4 Page Preview */}
         <div className="bg-white shadow-2xl print:shadow-none w-[210mm] min-h-[297mm] p-[20mm] relative mx-auto print:mx-0 print:w-full print:h-auto">
           {/* Header */}
-          <header className="flex justify-between items-start mb-12 border-b-2 border-gray-100 pb-6">
+          <header className="flex justify-between items-start mb-8 border-b-2 border-gray-100 pb-6">
             <div className="flex-1 pr-6">
               <h1 className="font-serif text-4xl font-bold text-gray-900 leading-tight mb-2">
                 {songData.title || "Untitled Song"}
@@ -118,21 +173,14 @@ const App: React.FC = () => {
           </header>
 
           {/* Lyrics Content */}
-          <main className="text-lg leading-relaxed font-sans text-gray-800 whitespace-pre-wrap columns-1 md:columns-2 gap-12 print:columns-2">
-            {result.processedLyrics}
+          <main className="text-lg leading-relaxed font-sans text-gray-800 columns-1 md:columns-2 gap-12 print:columns-2">
+             {result.lines.map((line, idx) => (
+                <p key={idx} className="mb-2 break-inside-avoid">
+                  {line}
+                </p>
+             ))}
           </main>
 
-          {/* Footer / Answer Key */}
-          <footer className="mt-16 pt-8 border-t border-gray-100 text-sm text-gray-400 flex flex-col items-end break-inside-avoid">
-            <p className="uppercase tracking-widest text-xs font-bold mb-2">Answer Key</p>
-            <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 transform rotate-180 origin-center select-none print:transform-none print:rotate-180">
-              {result.answerKey.map((word, i) => (
-                <span key={i} className="bg-gray-50 px-2 rounded">
-                  {i + 1}. {word}
-                </span>
-              ))}
-            </div>
-          </footer>
         </div>
         
         <p className="mt-8 text-gray-500 text-sm print:hidden">

@@ -8,19 +8,23 @@ export async function generateClozeGame(lyrics: string): Promise<ClozeResult> {
   const schema = {
     type: Type.OBJECT,
     properties: {
-      processedLyrics: {
-        type: Type.STRING,
-        description: "The full song lyrics with selected vocabulary words replaced by 10 underscores (__________). Preserve all original line breaks and stanza formatting.",
+      lines: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+        description: "The lyrics split into individual lines. Remove empty lines. Each line should have selected vocabulary words replaced by 10 underscores (__________). NO newline characters allowed in strings.",
       },
       answerKey: {
         type: Type.ARRAY,
-        items: {
-          type: Type.STRING,
-        },
-        description: "The list of words that were removed, in the order they appear in the lyrics.",
+        items: { type: Type.STRING },
+        description: "The list of words that were removed, in the correct order they appear in the lyrics.",
+      },
+      wordBank: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+        description: "The same list of words as answerKey, but shuffled in random order for the student to choose from.",
       },
     },
-    required: ["processedLyrics", "answerKey"],
+    required: ["lines", "answerKey", "wordBank"],
   };
 
   const prompt = `
@@ -33,8 +37,16 @@ export async function generateClozeGame(lyrics: string): Promise<ClozeResult> {
     4. Selection Criteria: 
        - Choose words that are clearly audible in a song context (verbs, adjectives, common nouns).
        - Avoid removing proper nouns (names, places) unless they are extremely common.
-       - Avoid removing slang or extremely obscure words unless they are key to the song's meaning and guessable.
-    5. Formatting: Replace the selected words with exactly 10 underscores: "__________".
+       - Avoid removing slang or extremely obscure words.
+    5. Formatting: 
+       - Return the lyrics as an array of strings ("lines"). 
+       - REMOVE any empty lines or stanzas to save space.
+       - In each line, replace the selected words with exactly 10 underscores: "__________".
+       - CRITICAL: Ensure no element in the 'lines' array contains newline characters ('\\n'). Split strictly by visual line breaks.
+    6. Output:
+       - lines: The processed lyrics lines.
+       - answerKey: The correct answers in order.
+       - wordBank: The correct answers shuffled randomly.
     
     Lyrics to process:
     "${lyrics}"
@@ -47,7 +59,7 @@ export async function generateClozeGame(lyrics: string): Promise<ClozeResult> {
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
-        temperature: 0.3, // Lower temperature for more deterministic/rule-following output
+        temperature: 0.3, 
       },
     });
 
@@ -56,7 +68,14 @@ export async function generateClozeGame(lyrics: string): Promise<ClozeResult> {
         throw new Error("No response from AI");
     }
 
-    return JSON.parse(text) as ClozeResult;
+    const result = JSON.parse(text) as ClozeResult;
+
+    // Post-processing to strictly enforce the "no newline" and "no empty lines" rule
+    result.lines = result.lines
+      .map(line => line.replace(/[\r\n]+/g, ' ').trim()) // Replace newlines with space and trim
+      .filter(line => line.length > 0); // Remove empty strings
+
+    return result;
   } catch (error) {
     console.error("Error generating cloze:", error);
     throw error;

@@ -6,8 +6,9 @@ export interface SongData {
 }
 
 export interface ClozeResult {
-  processedLyrics: string;
+  lines: string[];
   answerKey: string[];
+  wordBank: string[];
 }
 
 export enum AppState {
