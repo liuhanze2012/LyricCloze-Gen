@@ -35,17 +35,18 @@ const App: React.FC = () => {
     };
 
     // Intelligent Layout & Typography Logic
+    // Adjusted thresholds to be more conservative to prevent 2-page overflows
     if (lineCount > 75) {
       // Ultra Dense (Very long songs)
       settings = {
         ...settings,
-        textSize: 'text-[10px]', // Custom tiny text
-        lineHeight: 'leading-[1.4]',
+        textSize: 'text-[9px]', // Reduced from 10px
+        lineHeight: 'leading-[1.3]',
         tracking: 'tracking-tighter',
-        imageSize: 'w-16 h-16',
-        titleSize: 'text-xl',
-        artistSize: 'text-base',
-        headerMb: 'mb-3',
+        imageSize: 'w-14 h-14', // Smaller image
+        titleSize: 'text-lg',
+        artistSize: 'text-sm',
+        headerMb: 'mb-2',
         padding: 'p-[10mm]',
         colGap: 'gap-4',
       };
@@ -53,25 +54,26 @@ const App: React.FC = () => {
       // Dense
       settings = {
         ...settings,
-        textSize: 'text-xs',
-        lineHeight: 'leading-relaxed',
+        textSize: 'text-[11px]', // Reduced from xs(12px)
+        lineHeight: 'leading-[1.5]',
         tracking: 'tracking-tight',
-        imageSize: 'w-20 h-20',
-        titleSize: 'text-2xl',
-        headerMb: 'mb-4',
+        imageSize: 'w-16 h-16',
+        titleSize: 'text-xl',
+        artistSize: 'text-base',
+        headerMb: 'mb-3',
         padding: 'p-[12mm]',
-        colGap: 'gap-6',
+        colGap: 'gap-5',
       };
     } else if (lineCount > 50) {
       // Compact
       settings = {
         ...settings,
-        textSize: 'text-sm',
-        lineHeight: 'leading-loose', // Give it breath if space allows
+        textSize: 'text-xs', // 12px
+        lineHeight: 'leading-relaxed', 
         tracking: 'tracking-normal',
-        imageSize: 'w-24 h-24',
-        titleSize: 'text-3xl',
-        headerMb: 'mb-6',
+        imageSize: 'w-20 h-20',
+        titleSize: 'text-2xl',
+        headerMb: 'mb-5',
         padding: 'p-[15mm]',
         colGap: 'gap-8',
       };
@@ -79,12 +81,12 @@ const App: React.FC = () => {
       // Balanced / Normal
       settings = {
         ...settings,
-        textSize: 'text-base',
-        lineHeight: 'leading-[2.2]', // Custom loose leading to fill space
-        tracking: 'tracking-wide', // Slightly wider for elegance
-        imageSize: 'w-28 h-28',
+        textSize: 'text-sm', // 14px
+        lineHeight: 'leading-[2.0]', 
+        tracking: 'tracking-wide', 
+        imageSize: 'w-24 h-24',
         titleSize: 'text-3xl',
-        headerMb: 'mb-8',
+        headerMb: 'mb-6',
         padding: 'p-[18mm]',
         colGap: 'gap-10',
       };
@@ -92,28 +94,28 @@ const App: React.FC = () => {
       // Spacious
       settings = {
         ...settings,
-        textSize: 'text-lg',
-        lineHeight: 'leading-[2.5]', // Very loose
+        textSize: 'text-base', // 16px
+        lineHeight: 'leading-[2.5]', 
         tracking: 'tracking-wider',
-        imageSize: 'w-36 h-36',
+        imageSize: 'w-32 h-32',
         titleSize: 'text-4xl',
-        headerMb: 'mb-10',
+        headerMb: 'mb-8',
         padding: 'p-[20mm]',
         colGap: 'gap-12',
       };
     } else {
-      // Very Short - Center Single Column for Art Gallery feel
+      // Very Short - Center Single Column
       settings = {
         ...settings,
         textSize: 'text-xl',
-        lineHeight: 'leading-[3]', // Extremely loose
+        lineHeight: 'leading-[3]', 
         tracking: 'tracking-widest',
         imageSize: 'w-40 h-40',
         titleSize: 'text-5xl',
         artistSize: 'text-3xl',
         headerMb: 'mb-12',
         padding: 'p-[25mm]',
-        columnCount: 'columns-1 max-w-3xl mx-auto print:columns-1', // Force single column
+        columnCount: 'columns-1 max-w-3xl mx-auto print:columns-1', 
         colGap: 'gap-0',
       };
     }
@@ -166,34 +168,39 @@ const App: React.FC = () => {
 
     // --- Helper: Map Tailwind/App settings to CSS for Word ---
     const getWordStyles = (settings: any) => {
-      // 1. Font Size
+      // 1. Font Size - Tweak down slightly for Word to ensure single page fit
       const sizeMap: Record<string, string> = {
+        'text-[9px]': '7pt',
         'text-[10px]': '7.5pt',
+        'text-[11px]': '8pt',
         'text-xs': '9pt',
-        'text-sm': '10.5pt',
-        'text-base': '12pt',
-        'text-lg': '13.5pt',
-        'text-xl': '15pt',
-        'text-2xl': '18pt',
-        'text-3xl': '22.5pt',
-        'text-4xl': '27pt',
-        'text-5xl': '36pt',
+        'text-sm': '10pt',     // Slightly smaller than typical conversion
+        'text-base': '11pt',   // Standard doc size
+        'text-lg': '12pt',
+        'text-xl': '14pt',
+        'text-2xl': '16pt',
+        'text-3xl': '20pt',
+        'text-4xl': '24pt',
+        'text-5xl': '32pt',
       };
-      const fontSize = sizeMap[settings.textSize] || '12pt';
-      const titleSize = sizeMap[settings.titleSize] || '24pt';
-      const artistSize = sizeMap[settings.artistSize] || '14pt';
+      const fontSize = sizeMap[settings.textSize] || '11pt';
+      const titleSize = sizeMap[settings.titleSize] || '22pt';
+      const artistSize = sizeMap[settings.artistSize] || '12pt';
 
-      // 2. Line Height
-      let lineHeight = '1.5'; 
+      // 2. Line Height - Use % for better control in Word
+      let lineHeight = '120%'; 
       if (settings.lineHeight.includes('[')) {
-        lineHeight = settings.lineHeight.match(/\[(.*?)\]/)[1];
+        // extract raw number
+        const val = parseFloat(settings.lineHeight.match(/\[(.*?)\]/)[1]);
+        // Convert raw multiplier to percentage for Word (usually slightly tighter than web)
+        lineHeight = `${Math.floor(val * 100 * 0.9)}%`; 
       } else {
         const lhMap: Record<string, string> = {
-          'leading-normal': '1.5',
-          'leading-relaxed': '1.6',
-          'leading-loose': '2.0',
+          'leading-normal': '120%',
+          'leading-relaxed': '140%',
+          'leading-loose': '180%',
         };
-        lineHeight = lhMap[settings.lineHeight] || '1.5';
+        lineHeight = lhMap[settings.lineHeight] || '120%';
       }
 
       // 3. Letter Spacing
@@ -201,23 +208,22 @@ const App: React.FC = () => {
         'tracking-tighter': '-0.05em',
         'tracking-tight': '-0.025em',
         'tracking-normal': '0',
-        'tracking-wide': '0.05em', // adjusted for Word readability
+        'tracking-wide': '0.05em', 
         'tracking-wider': '0.1em',
         'tracking-widest': '0.2em',
       };
       const letterSpacing = trackMap[settings.tracking] || '0';
 
       // 4. Page Margins
-      // settings.padding is like 'p-[20mm]'
       const margin = settings.padding.match(/\[(.*?)\]/)?.[1] || '20mm';
 
       // 5. Columns
-      // Detect if we should use 2 columns based on the class string
       const cols = settings.columnCount.includes('columns-2') ? 2 : 1;
       
-      // Map Gap (gap-12 = 3rem ~ 0.5in)
+      // Map Gap
       let colGap = '0.5in';
       if (settings.colGap === 'gap-4') colGap = '0.15in';
+      if (settings.colGap === 'gap-5') colGap = '0.2in';
       if (settings.colGap === 'gap-6') colGap = '0.25in';
       if (settings.colGap === 'gap-8') colGap = '0.35in';
       if (settings.colGap === 'gap-10') colGap = '0.4in';
@@ -225,6 +231,7 @@ const App: React.FC = () => {
 
       // 6. Image Size
       const imgMap: Record<string, string> = {
+        'w-14 h-14': '56px',
         'w-16 h-16': '64px',
         'w-20 h-20': '80px',
         'w-24 h-24': '96px',
@@ -239,9 +246,9 @@ const App: React.FC = () => {
     };
 
     const styles = getWordStyles(layoutSettings);
+    const imgInt = parseInt(styles.imgDim); // Integer for width/height attributes
 
     // HTML Content for Word
-    // Using mso- specific styles to force columns and page layout in Word
     const content = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
@@ -255,7 +262,6 @@ const App: React.FC = () => {
             mso-header-margin: 35.4pt;
             mso-footer-margin: 35.4pt;
             mso-paper-source: 0;
-            /* Column Definition for Word */
             ${styles.cols > 1 ? `mso-columns: ${styles.cols} even ${styles.colGap};` : ''}
           }
           
@@ -270,27 +276,31 @@ const App: React.FC = () => {
             color: #000000;
           }
           
-          /* Header Styling - Using Table for reliability in Word */
-          table.header { width: 100%; border-bottom: 1.5pt solid #eeeeee; margin-bottom: 18pt; padding-bottom: 10pt; }
+          /* Header Styling */
+          table.header { width: 100%; border-bottom: 1.5pt solid #eeeeee; margin-bottom: 12pt; padding-bottom: 6pt; }
           h1 { font-size: ${styles.titleSize}; font-weight: bold; margin: 0; color: #111827; }
-          h2 { font-size: ${styles.artistSize}; font-weight: normal; margin: 4pt 0; color: #4B5563; }
+          h2 { font-size: ${styles.artistSize}; font-weight: normal; margin: 2pt 0; color: #4B5563; }
           
           .badge { 
-            font-size: 9pt; 
+            font-size: 8pt; 
             text-transform: uppercase; 
             color: #6B7280; 
             background: #F3F4F6; 
-            padding: 2pt 6pt;
+            padding: 2pt 4pt;
             border: 1pt solid #E5E7EB;
-            letter-spacing: 0.5pt;
             display: inline-block;
           }
 
-          /* Image */
-          img.cover { width: ${styles.imgDim}; height: ${styles.imgDim}; border: 1pt solid #E5E7EB; object-fit: cover; }
+          /* Image - width/height attributes are crucial for Word to render Base64 correctly */
+          img.cover { 
+            width: ${styles.imgDim}; 
+            height: ${styles.imgDim}; 
+            border: 1pt solid #E5E7EB; 
+            object-fit: cover; 
+          }
 
           /* Lyrics Styling */
-          p { margin: 0; } /* No default paragraph margin, control via line-height */
+          p { margin: 0; }
           .lyric-line { margin-bottom: 0; }
         </style>
       </head>
@@ -304,9 +314,9 @@ const App: React.FC = () => {
                 <h2>${songData.artist || "Unknown Artist"}</h2>
                 <span class="badge">Listening Cloze Exercise</span>
               </td>
-              <td valign="top" align="right" width="${parseInt(styles.imgDim) + 20}">
+              <td valign="top" align="right" width="${imgInt + 20}">
                 ${songData.coverImage 
-                  ? `<img src="${songData.coverImage}" class="cover" />` 
+                  ? `<img src="${songData.coverImage}" class="cover" width="${imgInt}" height="${imgInt}" alt="Cover" />` 
                   : ''}
               </td>
             </tr>
