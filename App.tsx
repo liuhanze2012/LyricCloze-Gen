@@ -15,108 +15,60 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Calculate layout settings based on line count to fit A4 harmoniously
+  // Calculate layout settings focusing on Readability and Aesthetics
   const layoutSettings = useMemo(() => {
     if (!result) return null;
-    const lineCount = result.lines.length;
+    const lines = result.lines;
+    
+    // Calculate density to decide between "Standard" (2 col) or "Short" (1 col centered)
+    const CHARS_PER_VISUAL_LINE = 55; 
+    
+    const visualDensity = lines.reduce((acc, line) => {
+      const len = line.length;
+      if (len === 0) return acc + 1;
+      return acc + Math.ceil(len / CHARS_PER_VISUAL_LINE);
+    }, 0);
 
-    // Base configuration extended with typography details
+    // Default Settings: Balanced & Readable (Most songs)
+    // 16px (12pt equivalent) text with generous spacing
     let settings = {
-      titleSize: 'text-4xl',
+      textSize: 'text-base',      
+      lineHeight: 'leading-relaxed', 
+      tracking: 'tracking-normal',
+      titleSize: 'text-3xl',
       artistSize: 'text-xl',
-      imageSize: 'w-32 h-32',
+      imageSize: 'w-28 h-28',
       headerMb: 'mb-8',
-      textSize: 'text-base',
-      lineHeight: 'leading-normal',
-      tracking: 'tracking-normal', // Letter spacing
-      colGap: 'gap-12',
-      columnCount: 'columns-1 md:columns-2 print:columns-2', // Default to 2 cols for print
       padding: 'p-[20mm]',
+      colGap: 'gap-12',
+      columnCount: 'columns-1 md:columns-2 print:columns-2',
     };
 
-    // Intelligent Layout & Typography Logic
-    // Adjusted thresholds to be more conservative to prevent 2-page overflows
-    if (lineCount > 75) {
-      // Ultra Dense (Very long songs)
+    if (visualDensity > 65) {
+      // Long Content: Slightly more compact but strictly readable
+      // 14px (11pt equivalent) is the floor. We do not go smaller.
       settings = {
         ...settings,
-        textSize: 'text-[9px]', // Reduced from 10px
-        lineHeight: 'leading-[1.3]',
-        tracking: 'tracking-tighter',
-        imageSize: 'w-14 h-14', // Smaller image
-        titleSize: 'text-lg',
-        artistSize: 'text-sm',
-        headerMb: 'mb-2',
-        padding: 'p-[10mm]',
-        colGap: 'gap-4',
-      };
-    } else if (lineCount > 60) {
-      // Dense
-      settings = {
-        ...settings,
-        textSize: 'text-[11px]', // Reduced from xs(12px)
-        lineHeight: 'leading-[1.5]',
-        tracking: 'tracking-tight',
-        imageSize: 'w-16 h-16',
-        titleSize: 'text-xl',
-        artistSize: 'text-base',
-        headerMb: 'mb-3',
-        padding: 'p-[12mm]',
-        colGap: 'gap-5',
-      };
-    } else if (lineCount > 50) {
-      // Compact
-      settings = {
-        ...settings,
-        textSize: 'text-xs', // 12px
-        lineHeight: 'leading-relaxed', 
-        tracking: 'tracking-normal',
-        imageSize: 'w-20 h-20',
-        titleSize: 'text-2xl',
-        headerMb: 'mb-5',
-        padding: 'p-[15mm]',
+        textSize: 'text-sm',    
+        lineHeight: 'leading-6', // 1.5 spacing
         colGap: 'gap-8',
-      };
-    } else if (lineCount > 35) {
-      // Balanced / Normal
-      settings = {
-        ...settings,
-        textSize: 'text-sm', // 14px
-        lineHeight: 'leading-[2.0]', 
-        tracking: 'tracking-wide', 
         imageSize: 'w-24 h-24',
-        titleSize: 'text-3xl',
+        titleSize: 'text-2xl',
+        artistSize: 'text-lg',
         headerMb: 'mb-6',
-        padding: 'p-[18mm]',
-        colGap: 'gap-10',
       };
-    } else if (lineCount > 22) {
-      // Spacious
+    } else if (visualDensity < 25) {
+      // Short Content: Elegant, centered, large text
       settings = {
         ...settings,
-        textSize: 'text-base', // 16px
-        lineHeight: 'leading-[2.5]', 
-        tracking: 'tracking-wider',
+        textSize: 'text-lg',    
+        lineHeight: 'leading-loose', // 2.0 spacing
+        tracking: 'tracking-wide',
+        colGap: 'gap-0',
+        columnCount: 'max-w-2xl mx-auto', 
         imageSize: 'w-32 h-32',
         titleSize: 'text-4xl',
-        headerMb: 'mb-8',
-        padding: 'p-[20mm]',
-        colGap: 'gap-12',
-      };
-    } else {
-      // Very Short - Center Single Column
-      settings = {
-        ...settings,
-        textSize: 'text-xl',
-        lineHeight: 'leading-[3]', 
-        tracking: 'tracking-widest',
-        imageSize: 'w-40 h-40',
-        titleSize: 'text-5xl',
-        artistSize: 'text-3xl',
-        headerMb: 'mb-12',
-        padding: 'p-[25mm]',
-        columnCount: 'columns-1 max-w-3xl mx-auto print:columns-1', 
-        colGap: 'gap-0',
+        headerMb: 'mb-10',
       };
     }
 
@@ -168,176 +120,116 @@ const App: React.FC = () => {
 
     // --- Helper: Map Tailwind/App settings to CSS for Word ---
     const getWordStyles = (settings: any) => {
-      // 1. Font Size - Tweak down slightly for Word to ensure single page fit
+      // 1. Font Size - Map to Standard Word Sizes (Points)
       const sizeMap: Record<string, string> = {
-        'text-[9px]': '7pt',
-        'text-[10px]': '7.5pt',
-        'text-[11px]': '8pt',
-        'text-xs': '9pt',
-        'text-sm': '10pt',     // Slightly smaller than typical conversion
-        'text-base': '11pt',   // Standard doc size
-        'text-lg': '12pt',
-        'text-xl': '14pt',
-        'text-2xl': '16pt',
-        'text-3xl': '20pt',
-        'text-4xl': '24pt',
-        'text-5xl': '32pt',
+        'text-sm': '11pt',   // Standard Body
+        'text-base': '12pt', // Large Body
+        'text-lg': '14pt',   // Header-like Body
+        'text-xl': '16pt',
+        'text-2xl': '18pt',
+        'text-3xl': '24pt',
+        'text-4xl': '28pt',
       };
-      const fontSize = sizeMap[settings.textSize] || '11pt';
-      const titleSize = sizeMap[settings.titleSize] || '22pt';
-      const artistSize = sizeMap[settings.artistSize] || '12pt';
+      
+      const fontSize = sizeMap[settings.textSize] || '12pt';
+      const titleSize = sizeMap[settings.titleSize] || '24pt';
+      const artistSize = sizeMap[settings.artistSize] || '14pt';
 
-      // 2. Line Height - Use % for better control in Word
-      let lineHeight = '120%'; 
-      if (settings.lineHeight.includes('[')) {
-        // extract raw number
-        const val = parseFloat(settings.lineHeight.match(/\[(.*?)\]/)[1]);
-        // Convert raw multiplier to percentage for Word (usually slightly tighter than web)
-        lineHeight = `${Math.floor(val * 100 * 0.9)}%`; 
-      } else {
-        const lhMap: Record<string, string> = {
-          'leading-normal': '120%',
-          'leading-relaxed': '140%',
-          'leading-loose': '180%',
-        };
-        lineHeight = lhMap[settings.lineHeight] || '120%';
-      }
-
-      // 3. Letter Spacing
-      const trackMap: Record<string, string> = {
-        'tracking-tighter': '-0.05em',
-        'tracking-tight': '-0.025em',
-        'tracking-normal': '0',
-        'tracking-wide': '0.05em', 
-        'tracking-wider': '0.1em',
-        'tracking-widest': '0.2em',
+      // 2. Line Height - Percentage for Word
+      const lhMap: Record<string, string> = {
+        'leading-6': '130%',      
+        'leading-relaxed': '150%', // Standard 1.5 lines
+        'leading-loose': '200%',  
       };
-      const letterSpacing = trackMap[settings.tracking] || '0';
+      const lineHeight = lhMap[settings.lineHeight] || '150%';
 
-      // 4. Page Margins
-      const margin = settings.padding.match(/\[(.*?)\]/)?.[1] || '20mm';
+      // 3. Spacing
+      const letterSpacing = settings.tracking.includes('wide') ? '0.5pt' : '0';
+
+      // 4. Margins - Standard 1 inch (2.54cm)
+      const margin = '2.54cm';
 
       // 5. Columns
       const cols = settings.columnCount.includes('columns-2') ? 2 : 1;
       
-      // Map Gap
-      let colGap = '0.5in';
-      if (settings.colGap === 'gap-4') colGap = '0.15in';
-      if (settings.colGap === 'gap-5') colGap = '0.2in';
-      if (settings.colGap === 'gap-6') colGap = '0.25in';
-      if (settings.colGap === 'gap-8') colGap = '0.35in';
-      if (settings.colGap === 'gap-10') colGap = '0.4in';
-      if (settings.colGap === 'gap-12') colGap = '0.5in';
-
-      // 6. Image Size
+      // 6. Image Dimensions (px)
       const imgMap: Record<string, string> = {
-        'w-14 h-14': '56px',
-        'w-16 h-16': '64px',
-        'w-20 h-20': '80px',
-        'w-24 h-24': '96px',
-        'w-28 h-28': '112px',
-        'w-32 h-32': '128px',
-        'w-36 h-36': '144px',
-        'w-40 h-40': '160px',
+        'w-24 h-24': '96',
+        'w-28 h-28': '112',
+        'w-32 h-32': '128',
+        'w-40 h-40': '160',
       };
-      const imgDim = imgMap[settings.imageSize] || '128px';
+      const imgDim = imgMap[settings.imageSize] || '112';
 
-      return { fontSize, titleSize, artistSize, lineHeight, letterSpacing, margin, cols, colGap, imgDim };
+      return { fontSize, titleSize, artistSize, lineHeight, letterSpacing, margin, cols, imgDim };
     };
 
     const styles = getWordStyles(layoutSettings);
-    const imgInt = parseInt(styles.imgDim); // Integer for width/height attributes
 
-    // HTML Content for Word
+    // HTML Content optimized for MS Word
     const content = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
-        <title>${songData.title} - Cloze Worksheet</title>
+        <title>${songData.title}</title>
         <style>
-          /* Page Layout */
           @page Section1 {
-            size: 595.3pt 841.9pt; /* A4 Size */
-            margin: ${styles.margin} ${styles.margin} ${styles.margin} ${styles.margin};
+            size: 595.3pt 841.9pt; /* A4 */
+            margin: ${styles.margin};
             mso-header-margin: 35.4pt;
             mso-footer-margin: 35.4pt;
             mso-paper-source: 0;
-            ${styles.cols > 1 ? `mso-columns: ${styles.cols} even ${styles.colGap};` : ''}
+            ${styles.cols > 1 ? `mso-columns: ${styles.cols} even 0.5in;` : ''}
           }
-          
           div.Section1 { page: Section1; }
           
-          /* Global Typography */
           body { 
-            font-family: 'Calibri', 'Arial', sans-serif; 
+            font-family: 'Calibri', 'Arial', sans-serif; /* Clean, modern font */
             font-size: ${styles.fontSize};
             line-height: ${styles.lineHeight};
             letter-spacing: ${styles.letterSpacing};
-            color: #000000;
+            color: #000;
           }
           
-          /* Header Styling */
-          table.header { width: 100%; border-bottom: 1.5pt solid #eeeeee; margin-bottom: 12pt; padding-bottom: 6pt; }
-          h1 { font-size: ${styles.titleSize}; font-weight: bold; margin: 0; color: #111827; }
-          h2 { font-size: ${styles.artistSize}; font-weight: normal; margin: 2pt 0; color: #4B5563; }
+          h1 { font-family: 'Arial', sans-serif; font-size: ${styles.titleSize}; font-weight: bold; margin-bottom: 6pt; color: #111; }
+          h2 { font-family: 'Arial', sans-serif; font-size: ${styles.artistSize}; font-weight: normal; margin-bottom: 12pt; color: #555; }
           
-          .badge { 
-            font-size: 8pt; 
-            text-transform: uppercase; 
-            color: #6B7280; 
-            background: #F3F4F6; 
-            padding: 2pt 4pt;
-            border: 1pt solid #E5E7EB;
-            display: inline-block;
-          }
-
-          /* Image - width/height attributes are crucial for Word to render Base64 correctly */
-          img.cover { 
-            width: ${styles.imgDim}; 
-            height: ${styles.imgDim}; 
-            border: 1pt solid #E5E7EB; 
-            object-fit: cover; 
-          }
-
-          /* Lyrics Styling */
-          p { margin: 0; }
-          .lyric-line { margin-bottom: 0; }
+          /* Paragraph spacing */
+          p { margin: 0 0 8pt 0; mso-pagination: widow-orphan; }
+          
+          .header-table { width: 100%; border-bottom: 1.5pt solid #eee; margin-bottom: 24pt; padding-bottom: 12pt; }
+          
+          /* Explicit dimensions for Word images */
+          img { width: ${styles.imgDim}px; height: ${styles.imgDim}px; }
         </style>
       </head>
       <body>
         <div class=Section1>
-          <!-- Header -->
-          <table class="header">
+          <table class="header-table">
             <tr>
-              <td valign="top">
-                <h1>${songData.title || "Untitled Song"}</h1>
-                <h2>${songData.artist || "Unknown Artist"}</h2>
-                <span class="badge">Listening Cloze Exercise</span>
+              <td valign="middle">
+                <h1>${songData.title}</h1>
+                <h2>${songData.artist}</h2>
+                <p style="font-size: 10pt; color: #777; margin-top: 4pt; text-transform: uppercase; letter-spacing: 1pt;">Listening Cloze Exercise</p>
               </td>
-              <td valign="top" align="right" width="${imgInt + 20}">
+              <td valign="middle" align="right" width="${parseInt(styles.imgDim) + 20}">
                 ${songData.coverImage 
-                  ? `<img src="${songData.coverImage}" class="cover" width="${imgInt}" height="${imgInt}" alt="Cover" />` 
+                  ? `<img src="${songData.coverImage}" width="${styles.imgDim}" height="${styles.imgDim}" alt="Cover" />` 
                   : ''}
               </td>
             </tr>
           </table>
-
-          <!-- Lyrics Content -->
-          ${result.lines.map(line => `<p class="lyric-line">${line === '' ? '&nbsp;' : line}</p>`).join('')}
+          ${result.lines.map(line => `<p>${line === '' ? '&nbsp;' : line}</p>`).join('')}
         </div>
       </body>
       </html>
     `;
 
-    const blob = new Blob(['\ufeff', content], {
-      type: 'application/msword'
-    });
-    
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const filename = `${songData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'worksheet'}_cloze.doc`;
-    link.download = filename;
+    link.download = `${songData.title.replace(/[^a-z0-9]/gi, '_')}_cloze.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -352,28 +244,18 @@ const App: React.FC = () => {
   if (appState === AppState.READY && result && layoutSettings) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center py-8 print:bg-white print:p-0 print:block">
-        {/* Toolbar - Hidden when printing */}
         <div className="w-full max-w-[210mm] mb-6 flex flex-col sm:flex-row justify-between items-center px-4 gap-4 print:hidden">
-          <button 
-            onClick={handleReset}
-            className="px-4 py-2 bg-gray-600 text-white rounded shadow hover:bg-gray-700 transition flex items-center gap-2"
-          >
+          <button onClick={handleReset} className="px-4 py-2 bg-gray-600 text-white rounded shadow hover:bg-gray-700 transition flex items-center gap-2">
             <span>←</span> Edit / New
           </button>
           <div className="flex gap-3">
-             <button 
-              onClick={handleExportWord}
-              className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition flex items-center gap-2"
-            >
+             <button onClick={handleExportWord} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded shadow hover:bg-indigo-700 transition flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
               Export to Word
             </button>
-             <button 
-              onClick={handlePrint}
-              className="px-6 py-2 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 transition flex items-center gap-2"
-            >
+             <button onClick={handlePrint} className="px-6 py-2 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 transition flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
               </svg>
@@ -382,9 +264,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* A4 Page Preview - Dynamic Styles Applied */}
         <div className={`bg-white shadow-2xl print:shadow-none w-[210mm] min-h-[297mm] ${layoutSettings.padding} flex flex-col relative mx-auto print:mx-0 print:w-full print:h-auto`}>
-          {/* Header */}
           <header className={`flex justify-between items-start ${layoutSettings.headerMb} border-b-2 border-gray-100 pb-4 flex-shrink-0`}>
             <div className="flex-1 pr-6">
               <h1 className={`font-serif ${layoutSettings.titleSize} font-bold text-gray-900 leading-tight mb-1`}>
@@ -415,12 +295,9 @@ const App: React.FC = () => {
             </div>
           </header>
 
-          {/* Lyrics Content */}
-          {/* Use flex-grow to fill space if needed, but columns layout is main driver */}
           <main className={`flex-grow ${layoutSettings.textSize} ${layoutSettings.lineHeight} ${layoutSettings.tracking} font-sans text-gray-800 ${layoutSettings.columnCount} ${layoutSettings.colGap}`}>
              {result.lines.map((line, idx) => (
-                <p key={idx} className="mb-0 break-inside-avoid">
-                  {/* Add a non-breaking space if line is empty to maintain height */}
+                <p key={idx} className="mb-3 break-inside-avoid">
                   {line === '' ? '\u00A0' : line}
                 </p>
              ))}

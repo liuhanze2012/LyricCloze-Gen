@@ -56,13 +56,14 @@ export default async function handler(req, res) {
       "${lyrics}"
     `;
 
+    // Using gemini-3-pro-preview for higher quality reasoning as requested
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-pro-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
-        temperature: 0.1, // Keep low temperature for speed and stability
+        temperature: 0.1, 
       },
     });
 
